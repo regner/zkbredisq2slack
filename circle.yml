@@ -1,0 +1,23 @@
+machine:
+  services:
+    - docker
+  environment:
+    CONTAINER_NAME: "zkbredisq2slack"
+
+dependencies:
+  override:
+    - docker info
+    - docker build -t regner/$CONTAINER_NAME:$CIRCLE_SHA1 .
+    - docker tag -f regner/$CONTAINER_NAME:$CIRCLE_SHA1 regner/$CONTAINER_NAME:latest
+
+test:
+  override:
+    - echo "No tests yet. :("
+
+deployment:
+  build and deploy:
+    branch: master
+    commands:
+      - docker login -e $DOCKER_EMAIL -u $DOCKER_USER -p $DOCKER_PASS
+      - docker push regner/$CONTAINER_NAME:$CIRCLE_SHA1
+      - docker push regner/$CONTAINER_NAME:latest
