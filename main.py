@@ -5,13 +5,15 @@ import json
 import logging
 import requests
 
+from eveimageserver import get_image_server_link
+
+
 logging.basicConfig()
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
 ZKILLBOARD_REDISQ = os.environ.get('REDISQ_URL', 'http://redisq.zkillboard.com/listen.php')
-WATCH_IDS = set(os.environ.get('WATCH_IDS', '98319972').split(','))
-SLACK_WEBHOOK = os.environ.get('SLACK_WEBHOOK', 'https://hooks.slack.com/services/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')
+WATCH_IDS = set(int(x) for x in os.environ.get('WATCH_IDS', '98319972').split(','))
 
 
 def find_entity_ids(entity):
@@ -104,16 +106,16 @@ def format_killmail_message(zkb_data, kill):
     }
 
     if kill is True:
-        color = 'green'
+        color = 'good'
 
     else:
-        color = 'red'
+        color = 'danger'
 
     return {
         'attachments': [
             {
                 'title': title,
-                'color': color,s
+                'color': color,
                 'fallback': title,
                 'title_link': 'https://zkillboard.com/kill/{}/'.format(zkb_data['killID']),
                 'thumb_url': get_image_server_link(killmail['victim']['shipType']['id'], 'type', 64),
@@ -129,13 +131,14 @@ def format_killmail_message(zkb_data, kill):
     }
 
 
-def process_killmail(zkb_data):
-    found_ids = find_attacker_ids(zkb_data['killmail'])
-
-    intersection = found_ids.intersection(WATCH_IDS)
+def process_killmail(zkb_data, slack_webhook):
     formatted_slack_message = None
 
+    found_ids = find_attacker_ids(zkb_data['killmail'])
+    intersection = found_ids.intersection(WATCH_IDS)
+
     if len(intersection) > 0:
+        logger.info('Found matching IDs indicating a kill on killmail ID {}'.format(zkb_data['killID']))
         formatted_slack_message = format_killmail_message(zkb_data, kill=True)
 
     else:
@@ -143,32 +146,49 @@ def process_killmail(zkb_data):
         intersection = found_ids.intersection(WATCH_IDS)
 
         if len(intersection) > 0:
+            logger.info('Found matching IDs indicating a loss on killmail ID {}'.format(zkb_data['killID']))
             formatted_slack_message = format_killmail_message(zkb_data, kill=False)
 
     if formatted_slack_message:
-        response = requests.post(SLACK_WEBHOOK, data=json.dumps(formatted_slack_message))
+        logger.info('Sending a Slack message for killmail ID {}'.format(zkb_data['killID']))
+
+        requests.post(slack_webhook, data=json.dumps(formatted_slack_message))
+
+    else:
+        logger.info('Did not find any matching IDs in killmail ID {}'.format(zkb_data['killID']))
 
 
-def run:
-    while True:
+def run(slack_webhook=None):
+    if slack_webhook is None:
+        slack_webhook = os.environ.get('SLACK_WEBHOOK')
+
+    if slack_webhook is None:
+        logger.error('The SLACK_WEBHOOK environment variable is not set. This must be set to continue')
+        return
+
+    try:
         response = requests.get(ZKILLBOARD_REDISQ)
+    except requests.exceptions.ConnectionError:
+        logger.info('Got a connection reset error from zKillboard. Continuing on with life.')
+        return
 
-        if response.status_code == requests.codes.ok:
-            data = response.json()
-            
-            if data['package'] is not None:
-                zkb_data = data['package']
+    if response.status_code == requests.codes.ok:
+        data = response.json()
 
-                logger.info('Publishing new killmail with ID {}.'.format(zkb_data['killID']))
+        if data['package'] is not None:
+            zkb_data = data['package']
 
-                process_killmail(zkb_data)
-            
-            else:
-                logger.info('No new killmail.')
-        
+            logger.info('Got new killmail with ID {}.'.format(zkb_data['killID']))
+
+            process_killmail(zkb_data, slack_webhook)
+
         else:
-            logger.error('Problem with zKB response. Got code {}.'.format(response.status_code))
+            logger.info('No new killmail.')
+
+    else:
+        logger.error('Problem with zKB response. Got code {}.'.format(response.status_code))
 
 
 if __name__ == '__main__':
-    run()
+    while True:
+        run()
