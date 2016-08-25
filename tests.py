@@ -1,7 +1,6 @@
 
 
 import json
-import requests
 import responses
 import sample_data
 

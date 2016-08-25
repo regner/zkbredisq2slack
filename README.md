@@ -1,6 +1,8 @@
 # zkbredisq2slack
 Yet another script for getting Slack messages about killmails that appear on zKillboard. The big advantage of this one over the others, at least all the others I could find, is that it pulls killmails from the zKillboard RedisQ instead of from the zKillboard API. API pages from zKillboard are cached and the RedisQ pushes killmails out as they come in. The end result is that killmails get posted to Slack as soon (or very fucking close to) as they get posted to zKillboard.
 
+![Screenshot of the Slack message](screenshot.png?raw=true)
+
 ## Running it
 You have a few ways to run this script. The easiest, if you have Docker, is to simply run the following:
 
