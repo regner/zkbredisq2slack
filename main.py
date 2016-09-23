@@ -5,6 +5,7 @@ import json
 import logging
 import requests
 
+from time import sleep
 from eveimageserver import get_image_server_link
 
 
@@ -158,37 +159,45 @@ def process_killmail(zkb_data, slack_webhook):
         logger.info('Did not find any matching IDs in killmail ID {}'.format(zkb_data['killID']))
 
 
-def run(slack_webhook=None):
-    if slack_webhook is None:
-        slack_webhook = os.environ.get('SLACK_WEBHOOK')
-
-    if slack_webhook is None:
-        logger.error('The SLACK_WEBHOOK environment variable is not set. This must be set to continue')
-        return
-
+def get_killmail():
     try:
-        response = requests.get(ZKILLBOARD_REDISQ)
+        return requests.get(ZKILLBOARD_REDISQ)
+
     except requests.exceptions.ConnectionError:
         logger.info('Got a connection reset error from zKillboard. Continuing on with life.')
-        return
+
+
+def check_response_for_killmail(response):
+    data = response.json()
+
+    if data['package'] is not None:
+        zkb_data = data['package']
+
+        logger.info('Got new killmail with ID {}.'.format(zkb_data['killID']))
+
+        return zkb_data
+
+    else:
+        logger.info('No new killmail.')
+
+
+def run(slack_webhook):
+    if slack_webhook is None:
+        raise ValueError('The SLACK_WEBHOOK environment variable is not set. This must be set to continue')
+
+    response = get_killmail()
 
     if response.status_code == requests.codes.ok:
-        data = response.json()
-
-        if data['package'] is not None:
-            zkb_data = data['package']
-
-            logger.info('Got new killmail with ID {}.'.format(zkb_data['killID']))
-
-            process_killmail(zkb_data, slack_webhook)
-
-        else:
-            logger.info('No new killmail.')
+        killmail = check_response_for_killmail(response)
+        process_killmail(killmail, slack_webhook)
 
     else:
         logger.error('Problem with zKB response. Got code {}.'.format(response.status_code))
+        sleep(1)
 
 
 if __name__ == '__main__':
+    slack_webhook = os.environ.get('SLACK_WEBHOOK')
+
     while True:
-        run()
+        run(slack_webhook)
