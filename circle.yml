@@ -1,8 +1,6 @@
 machine:
   services:
     - docker
-  post:
-    - pyenv global 2.7.12 3.5.2
   environment:
     CONTAINER_NAME: "zkbredisq2slack"
 
