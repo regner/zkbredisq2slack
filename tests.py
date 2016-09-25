@@ -1,6 +1,7 @@
 
 
 import json
+import pytest
 import responses
 import sample_data
 
@@ -47,3 +48,9 @@ def test_victim():
 
     assert len(responses.calls) == 2
     assert json.loads(responses.calls[1].request.body) == json.loads(sample_data.VICTIM_SLACK)
+
+
+def test_exception_when_no_webhook_url():
+    """Ensure we raise an exception when no webhook URL is provided"""
+    with pytest.raises(ValueError):
+        run(None)

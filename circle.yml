@@ -1,18 +1,21 @@
 machine:
   services:
     - docker
+  python:
+    version: 3.5.1
   environment:
     CONTAINER_NAME: "zkbredisq2slack"
+
+test:
+  override:
+    - pip install --upgrade tox
+    - tox
 
 dependencies:
   override:
     - docker info
     - docker build -t regner/$CONTAINER_NAME:$CIRCLE_SHA1 .
     - docker tag -f regner/$CONTAINER_NAME:$CIRCLE_SHA1 regner/$CONTAINER_NAME:latest
-
-test:
-  override:
-    - echo "No tests yet. :("
 
 deployment:
   build and deploy:
