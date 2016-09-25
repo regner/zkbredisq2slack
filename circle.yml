@@ -6,6 +6,11 @@ machine:
   environment:
     CONTAINER_NAME: "zkbredisq2slack"
 
+test:
+  override:
+    - pip install --upgrade tox
+    - tox
+
 dependencies:
   override:
     - docker info
