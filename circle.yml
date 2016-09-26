@@ -8,11 +8,11 @@ machine:
 
 test:
   override:
-    - pip install --upgrade tox
     - tox
 
 dependencies:
   override:
+    - pip install --upgrade tox
     - docker info
     - docker build -t regner/$CONTAINER_NAME:$CIRCLE_SHA1 .
     - docker tag -f regner/$CONTAINER_NAME:$CIRCLE_SHA1 regner/$CONTAINER_NAME:latest
