@@ -189,7 +189,9 @@ def run(slack_webhook):
 
     if response.status_code == requests.codes.ok:
         killmail = check_response_for_killmail(response)
-        process_killmail(killmail, slack_webhook)
+        
+        if killmail is not None:
+            process_killmail(killmail, slack_webhook)
 
     else:
         logger.error('Problem with zKB response. Got code {}.'.format(response.status_code))
