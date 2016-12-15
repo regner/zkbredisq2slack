@@ -189,7 +189,7 @@ def run(slack_webhook):
 
     if response.status_code == requests.codes.ok:
         killmail = check_response_for_killmail(response)
-        
+
         if killmail is not None:
             process_killmail(killmail, slack_webhook)
 
